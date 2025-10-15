@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en" ng-app="shopApp">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Online Shopping - Cart</title>
+
+  <!-- AngularJS 1.x -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+
+  <style>
+    /* Simple, clean CSS3 */
+    :root { --accent: #2d9cdb; --muted: #6b6b6b; --bg: #f7f9fb; --card: #ffffff; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: var(--bg); margin: 0; padding: 24px; color:#222; }
+    .container { max-width: 980px; margin: 0 auto; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    header h1 { margin:0; font-size:1.4rem; }
+    .card { background: var(--card); border-radius:12px; padding:16px; box-shadow:0 6px 18px rgba(30,30,30,0.06); }
+    form.grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:12px; align-items:end; }
+    label { font-size:0.82rem; color:var(--muted); display:block; margin-bottom:6px; }
+    input[type="text"], input[type="number"], input[type="date"] {
+      width:100%; padding:10px 12px; border:1px solid #e3e6ea; border-radius:8px; box-sizing:border-box;
+    }
+    button { background:var(--accent); color:#fff; padding:10px 14px; border: none; border-radius:10px; cursor:pointer; font-weight:600; }
+    button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { text-align:left; padding:10px 8px; border-bottom:1px solid #eef2f5; font-size:0.95rem; }
+    th { color:var(--muted); font-weight:600; font-size:0.9rem; }
+    .actions button { margin-right:8px; padding:6px 8px; font-size:0.85rem; border-radius:8px; }
+    .small { font-size:0.85rem; color:#666; }
+    .empty { text-align:center; padding:24px 8px; color:#777;}
+    @media (max-width:600px){
+      header { flex-direction:column; align-items:flex-start; gap:8px; }
+      form.grid { grid-template-columns: 1fr; }
+      .actions button { margin-bottom:6px; display:inline-block; }
+    }
+  </style>
+</head>
+<body ng-controller="CartCtrl as vm">
+  <div class="container">
+    <header>
+      <h1>Online Shopping — Cart Manager</h1>
+    </header>
+
+    <div class="card" style="margin-bottom:16px;">
+      <form class="grid" ng-submit="vm.addToCart()" novalidate>
+        <div>
+          <label>Product name</label>
+          <input type="text" ng-model="vm.form.productName" required placeholder="e.g. Wireless Mouse" />
+        </div>
+
+        <div>
+          <label>Quantity</label>
+          <input type="number" ng-model="vm.form.quantity" required min="1" />
+        </div>
+
+        <div>
+          <label>Price (per unit)</label>
+          <input type="number" ng-model="vm.form.price" required min="0" step="0.01" />
+        </div>
+
+        <div>
+          <label>Date</label>
+          <input type="date" ng-model="vm.form.date" required />
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="submit">Add to Kart</button>
+          <button type="button" class="secondary" ng-click="vm.resetForm()">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Cart</h3>
+
+      <table ng-if="vm.cart.length > 0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Price (unit)</th>
+            <th>Date</th>
+            <th>Total</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="item in vm.cart track by item._id">
+            <td>{{$index + 1}}</td>
+
+            <td>
+              <div ng-if="!item._editing">{{item.productName}}</div>
+              <div ng-if="item._editing">
+                <input type="text" ng-model="item._edit.productName" />
+              </div>
+            </td>
+
+            <td>
+              <div ng-if="!item._editing">{{item.quantity}}</div>
+              <div ng-if="item._editing">
+                <input type="number" min="1" ng-model="item._edit.quantity" />
+              </div>
+            </td>
+
+            <td>
+              <div ng-if="!item._editing">{{item.price | number:2}}</div>
+              <div ng-if="item._editing">
+                <input type="number" min="0" step="0.01" ng-model="item._edit.price" />
+              </div>
+            </td>
+
+            <td>
+              <div ng-if="!item._editing">{{item.date | date:'yyyy-MM-dd'}}</div>
+              <div ng-if="item._editing">
+                <input type="date" ng-model="item._edit.date" />
+              </div>
+            </td>
+
+            <td>{{ (item.quantity * item.price) | number:2 }}</td>
+
+            <td class="actions">
+              <div ng-if="!item._editing">
+                <button class="secondary" ng-click="vm.startEdit(item)">Edit</button>
+                <button ng-click="vm.deleteItem(item)">Delete</button>
+              </div>
+
+              <div ng-if="item._editing">
+                <button ng-click="vm.saveEdit(item)">Save</button>
+                <button class="secondary" ng-click="vm.cancelEdit(item)">Cancel</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div ng-if="vm.cart.length === 0" class="empty">
+        Cart is empty. Add items using the form above.
+      </div>
+
+      <div style="margin-top:12px; text-align:right;" ng-if="vm.cart.length > 0">
+        <strong>Grand Total: </strong> {{ vm.grandTotal() | number:2 }}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    angular.module('shopApp', [])
+      .controller('CartCtrl', ['$http', '$window', function($http, $window) {
+        const vm = this;
+        vm.apiBase = 'http://localhost:3000/api/cart';
+        vm.cart = [];
+        vm.form = { productName: '', quantity: 1, price: 0.00, date: null };
+
+        vm.loadCart = function() {
+          $http.get(vm.apiBase).then(function(res) {
+            vm.cart = res.data.map(function(it) {
+              it.date = it.date ? new Date(it.date) : null;
+              it._editing = false;
+              it._edit = {};
+              return it;
+            });
+          }, function(err) {
+            console.error('Failed to load cart', err);
+            $window.alert('Failed to load cart from server. Is server running on port 3000?');
+          });
+        };
+
+        vm.resetForm = function() {
+          vm.form = { productName: '', quantity: 1, price: 0.00, date: null };
+        };
+
+        vm.addToCart = function() {
+          if (!vm.form.productName || !vm.form.quantity || vm.form.price == null || !vm.form.date) {
+            $window.alert('Please fill all fields.');
+            return;
+          }
+          const payload = {
+            productName: vm.form.productName,
+            quantity: Number(vm.form.quantity),
+            price: Number(vm.form.price),
+            date: vm.form.date 
+          };
+          $http.post(vm.apiBase, payload).then(function(res) {
+            vm.loadCart();
+            vm.resetForm();
+          }, function(err) {
+            console.error('Add failed', err);
+            $window.alert('Failed to add item to cart.');
+          });
+        };
+
+        vm.deleteItem = function(item) {
+          if (!confirm('Delete this item?')) return;
+          $http.delete(vm.apiBase + '/' + item._id).then(function() {
+            vm.loadCart();
+          }, function(err) {
+            console.error('Delete failed', err);
+            $window.alert('Failed to delete item.');
+          });
+        };
+
+        vm.startEdit = function(item) {
+          item._editing = true;
+          item._edit = {
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price,
+            date: item.date ? new Date(item.date).toISOString().substring(0,10) : null
+          };
+        };
+
+        vm.cancelEdit = function(item) {
+          item._editing = false;
+          item._edit = {};
+        };
+
+        vm.saveEdit = function(item) {
+          if (!item._edit.productName || !item._edit.quantity || item._edit.price == null || !item._edit.date) {
+            $window.alert('Please fill all fields.');
+            return;
+          }
+          const payload = {
+            productName: item._edit.productName,
+            quantity: Number(item._edit.quantity),
+            price: Number(item._edit.price),
+            date: item._edit.date
+          };
+          $http.put(vm.apiBase + '/' + item._id, payload).then(function() {
+            item._editing = false;
+            vm.loadCart();
+          }, function(err) {
+            console.error('Update failed', err);
+            $window.alert('Failed to update item.');
+          });
+        };
+
+        vm.grandTotal = function() {
+          return vm.cart.reduce(function(sum, it) {
+            return sum + (Number(it.quantity) * Number(it.price));
+          }, 0);
+        };
+
+        vm.loadCart();
+      }]);
+  </script>
+</body>
+</html>
