@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="marksApp">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Marks Dashboard</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f7f9fc;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 25px;
+    }
+    .student-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      padding: 15px;
+      transition: transform 0.2s ease;
+    }
+    .student-card:hover {
+      transform: scale(1.03);
+    }
+    .student-card h3 {
+      margin-top: 0;
+    }
+    .marks {
+      font-size: 1.1rem;
+      margin: 6px 0;
+    }
+    .grade {
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 8px;
+      color: white;
+    }
+    .pass { background: #27ae60; }
+    .fail { background: #e74c3c; }
+    .distinction { background: #f1c40f; color: #333; }
+    .filters {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    select {
+      padding: 6px 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body ng-controller="MainCtrl as vm">
+
+  <h1>🎓 Student Marks Dashboard</h1>
+
+  <div class="filters">
+    <label>Filter by Status:
+      <select ng-model="vm.statusFilter">
+        <option value="">All</option>
+        <option value="Pass">Pass</option>
+        <option value="Fail">Fail</option>
+        <option value="Distinction">Distinction</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="dashboard">
+    <student-card 
+      ng-repeat="s in vm.students | filter:vm.statusFilterFn"
+      data="s">
+    </student-card>
+  </div>
+
+  <script>
+    angular.module('marksApp', [])
+
+    .service('StudentService', function() {
+      const students = [
+        { name: "Alice", marks: 95 },
+        { name: "Bob", marks: 68 },
+        { name: "Charlie", marks: 52 },
+        { name: "Diana", marks: 84 },
+        { name: "Ethan", marks: 45 },
+        { name: "Fiona", marks: 77 },
+      ];
+      this.getStudents = function() {
+        return students;
+      };
+    })
+
+    .filter('gradeFilter', function() {
+      return function(marks) {
+        if (marks >= 85) return "Distinction";
+        else if (marks >= 50) return "Pass";
+        else return "Fail";
+      };
+    })
+
+    .controller('MainCtrl', function(StudentService, $filter) {
+      const vm = this;
+      vm.students = StudentService.getStudents();
+
+      vm.statusFilterFn = function(student) {
+        if (!vm.statusFilter) return true;
+        const grade = $filter('gradeFilter')(student.marks);
+        return grade === vm.statusFilter;
+      };
+    })
+
+    .directive('studentCard', function($filter) {
+      return {
+        restrict: 'E',
+        scope: {
+          data: '='
+        },
+        template: `
+          <div class="student-card">
+            <h3>{{data.name}}</h3>
+            <div class="marks">Marks: {{data.marks}}</div>
+            <div class="grade"
+                 ng-class="{'distinction': grade=='Distinction',
+                            'pass': grade=='Pass',
+                            'fail': grade=='Fail'}">
+              {{grade}}
+            </div>
+          </div>
+        `,
+        link: function(scope) {
+          scope.grade = $filter('gradeFilter')(scope.data.marks);
+        }
+      };
+    });
+  </script>
+
+</body>
+</html>
